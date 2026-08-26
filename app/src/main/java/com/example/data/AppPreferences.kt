@@ -58,6 +58,9 @@ class AppPreferences(context: Context) {
     private val _dockToEdge = MutableStateFlow(prefs.getBoolean(KEY_DOCK_TO_EDGE, true))
     val dockToEdge: StateFlow<Boolean> = _dockToEdge.asStateFlow()
 
+    private val _autoDim = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DIM, false))
+    val autoDim: StateFlow<Boolean> = _autoDim.asStateFlow()
+
     private val _bubbleX = MutableStateFlow(prefs.getInt(KEY_BUBBLE_X, -1))
     val bubbleX: StateFlow<Int> = _bubbleX.asStateFlow()
 
@@ -104,6 +107,11 @@ class AppPreferences(context: Context) {
         _dockToEdge.value = enabled
     }
 
+    fun setAutoDim(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_DIM, enabled).apply()
+        _autoDim.value = enabled
+    }
+
     fun setBubblePosition(x: Int, y: Int) {
         prefs.edit().putInt(KEY_BUBBLE_X, x).putInt(KEY_BUBBLE_Y, y).apply()
         _bubbleX.value = x
@@ -119,6 +127,7 @@ class AppPreferences(context: Context) {
         private const val KEY_AUTO_COPY = "key_auto_copy"
         private const val KEY_PREFER_OFFLINE = "key_prefer_offline"
         private const val KEY_DOCK_TO_EDGE = "key_dock_to_edge"
+        private const val KEY_AUTO_DIM = "key_auto_dim"
         private const val KEY_BUBBLE_X = "key_bubble_x"
         private const val KEY_BUBBLE_Y = "key_bubble_y"
 

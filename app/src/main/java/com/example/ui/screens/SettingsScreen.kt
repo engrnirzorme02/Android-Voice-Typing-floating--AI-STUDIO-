@@ -1,7 +1,11 @@
 package com.example.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Animation
+import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
@@ -84,6 +89,10 @@ fun SettingsScreen(
     val sound by prefs.soundFeedback.collectAsState()
     val preferOffline by prefs.preferOffline.collectAsState()
     val dockToEdge by prefs.dockToEdge.collectAsState()
+    val autoDim by prefs.autoDim.collectAsState()
+
+    val allHistory by app.repository.allHistory.collectAsState(initial = emptyList())
+    val recentHistory = remember(allHistory) { allHistory.take(5) }
 
     val currentLang = remember(selectedLangCode) { SupportedLanguages.getLanguageByCode(selectedLangCode) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -148,6 +157,17 @@ fun SettingsScreen(
                     modifier = Modifier.testTag("bubble_opacity_slider")
                 )
             }
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+            // Auto Dim Switch
+            SettingsSwitchRow(
+                title = "অলস অবস্থায় বাবল অনুজ্জ্বল করা (Auto Dim)",
+                description = "৩০ সেকেন্ড নিষ্ক্রিয় থাকলে স্ক্রিন ডিস্ট্রাকশন কমাতে বাবলটি ম্লান হয়ে যাবে",
+                icon = Icons.Default.BrightnessMedium,
+                checked = autoDim,
+                onCheckedChange = { prefs.setAutoDim(it) }
+            )
 
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
@@ -287,7 +307,60 @@ fun SettingsScreen(
             }
         }
 
-        // Section 4: System Overlays Permission Link
+        // Section 4: Recent History (Settings Tab)
+        SectionCard(title = "সাম্প্রতিক ট্রান্সক্রিপশন (Recent 5 History)") {
+            if (recentHistory.isEmpty()) {
+                Text(
+                    text = "কোনো পূর্ববর্তী ট্রান্সক্রিপশন পাওয়া যায়নি।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    recentHistory.forEach { historyItem ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = historyItem.text,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                modifier = Modifier.weight(1f).padding(end = 12.dp),
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.clickable {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Voice Transcription", historyItem.text)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "কপি হয়েছে!", Toast.LENGTH_SHORT).show()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Copy",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(8.dp).size(16.dp)
+                                )
+                            }
+                        }
+                        if (historyItem != recentHistory.last()) {
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 5: System Overlays Permission Link
         SectionCard(title = "সিস্টেম সেটিংস ও পারমিশন") {
             SettingsActionRow(
                 title = "ডিসপ্লে ওভারলে পারমিশন সেটিংস",

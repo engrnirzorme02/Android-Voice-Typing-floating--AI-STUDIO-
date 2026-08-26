@@ -84,6 +84,9 @@ class FloatingBubbleService : Service() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var hideCopiedBadgeRunnable: Runnable? = null
+    private var inactivityRunnable: Runnable? = null
+    private val INACTIVITY_TIMEOUT = 30_000L
+    private var isDimmed = false
 
     companion object {
         const val CHANNEL_ID = "voice_bubble_service_channel"
@@ -432,7 +435,37 @@ class FloatingBubbleService : Service() {
         }
     }
 
+    private fun resetInactivityTimer() {
+        inactivityRunnable?.let { mainHandler.removeCallbacks(it) }
+        
+        if (isDimmed) {
+            isDimmed = false
+            val alphaAnim = AlphaAnimation(0.3f, appPreferences.bubbleOpacity.value).apply {
+                duration = 300
+                fillAfter = true
+            }
+            bubbleCircle?.startAnimation(alphaAnim)
+            bubbleCircle?.alpha = appPreferences.bubbleOpacity.value
+        }
+        
+        if (appPreferences.autoDim.value && !isRecording) {
+            inactivityRunnable = Runnable {
+                if (!isRecording) {
+                    isDimmed = true
+                    val alphaAnim = AlphaAnimation(appPreferences.bubbleOpacity.value, 0.3f).apply {
+                        duration = 500
+                        fillAfter = true
+                    }
+                    bubbleCircle?.startAnimation(alphaAnim)
+                    bubbleCircle?.alpha = 0.3f
+                }
+            }
+            mainHandler.postDelayed(inactivityRunnable!!, INACTIVITY_TIMEOUT)
+        }
+    }
+
     private fun handleTouch(event: MotionEvent): Boolean {
+        resetInactivityTimer()
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 initialX = windowParams.x
@@ -507,10 +540,12 @@ class FloatingBubbleService : Service() {
         } else {
             startRecording()
         }
+        resetInactivityTimer()
     }
 
     private fun startRecording() {
         isRecording = true
+        resetInactivityTimer()
         showPulseAnimation(true)
         showInfoPill("বলুন... (Listening)", true)
         updateNotification("ভয়েস শুনছি... কথা বলুন")
@@ -545,6 +580,7 @@ class FloatingBubbleService : Service() {
 
     private fun stopRecordingAndRecognize() {
         isRecording = false
+        resetInactivityTimer()
         showPulseAnimation(false)
         showInfoPill("প্রসেস হচ্ছে...", true)
         speechEngine.stopListening()
@@ -669,7 +705,14 @@ class FloatingBubbleService : Service() {
         }
         serviceScope.launch {
             appPreferences.bubbleOpacity.collect { opacity ->
-                bubbleCircle?.alpha = opacity
+                if (!isDimmed) {
+                    bubbleCircle?.alpha = opacity
+                }
+            }
+        }
+        serviceScope.launch {
+            appPreferences.autoDim.collect {
+                resetInactivityTimer()
             }
         }
     }
