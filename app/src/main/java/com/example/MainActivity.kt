@@ -80,6 +80,10 @@ import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.MyApplicationTheme
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 enum class Screen(val route: String, val title: String, val selectedIcon: ImageVector, val unselectedIcon: ImageVector) {
     HOME("home", "হোম (Home)", Icons.Filled.Home, Icons.Outlined.Home),
     HISTORY("history", "ইতিহাস (History)", Icons.Filled.History, Icons.Outlined.History),
@@ -88,9 +92,20 @@ enum class Screen(val route: String, val title: String, val selectedIcon: ImageV
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_NAV_TARGET = "extra_nav_target"
+        const val TARGET_HISTORY = "history"
+        const val TARGET_SETTINGS = "settings"
+        const val TARGET_HOME = "home"
+    }
+
+    private val _navTarget = MutableStateFlow<String?>(null)
+    val navTarget: StateFlow<String?> = _navTarget.asStateFlow()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleIntent(intent)
 
         setContent {
             MyApplicationTheme {
@@ -101,6 +116,22 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent?.getStringExtra(EXTRA_NAV_TARGET)?.let { target ->
+            _navTarget.value = target
+        }
+    }
+
+    fun clearNavTarget() {
+        _navTarget.value = null
     }
 
     private var micPermissionLauncher: (() -> Unit)? = null
@@ -219,6 +250,42 @@ fun MainAppContent(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.HOME.route
+
+    val navTarget by (mainActivity?.navTarget?.collectAsState()) ?: remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(navTarget) {
+        navTarget?.let { target ->
+            when (target) {
+                MainActivity.TARGET_HISTORY -> {
+                    if (currentRoute != Screen.HISTORY.route) {
+                        navController.navigate(Screen.HISTORY.route) {
+                            popUpTo(Screen.HOME.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                    mainActivity?.clearNavTarget()
+                }
+                MainActivity.TARGET_SETTINGS -> {
+                    if (currentRoute != Screen.SETTINGS.route) {
+                        navController.navigate(Screen.SETTINGS.route) {
+                            popUpTo(Screen.HOME.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                    mainActivity?.clearNavTarget()
+                }
+                MainActivity.TARGET_HOME -> {
+                    if (currentRoute != Screen.HOME.route) {
+                        navController.navigate(Screen.HOME.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                    mainActivity?.clearNavTarget()
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

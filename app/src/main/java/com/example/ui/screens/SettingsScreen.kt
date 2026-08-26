@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Animation
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
@@ -90,6 +91,7 @@ fun SettingsScreen(
     val preferOffline by prefs.preferOffline.collectAsState()
     val dockToEdge by prefs.dockToEdge.collectAsState()
     val autoDim by prefs.autoDim.collectAsState()
+    val aiPolishEnabled by prefs.aiPolishEnabled.collectAsState()
 
     val allHistory by app.repository.allHistory.collectAsState(initial = emptyList())
     val recentHistory = remember(allHistory) { allHistory.take(5) }
@@ -245,6 +247,17 @@ fun SettingsScreen(
                 icon = Icons.Default.VolumeUp,
                 checked = sound,
                 onCheckedChange = { prefs.setSoundFeedback(it) }
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+            // AI Polish & Grammar Paraphrase (Gemini)
+            SettingsSwitchRow(
+                title = "Gemini AI অটো-প্যারাফ্রেজ ও শুদ্ধিকরণ",
+                description = "বলা কথার ফিলার শব্দ দূর করে ব্যাকরণগতভাবে গুছিয়ে স্বয়ংক্রিয়ভাবে নিখুঁত করবে",
+                icon = Icons.Default.AutoAwesome,
+                checked = aiPolishEnabled,
+                onCheckedChange = { prefs.setAiPolishEnabled(it) }
             )
         }
 

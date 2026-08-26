@@ -61,6 +61,9 @@ class AppPreferences(context: Context) {
     private val _autoDim = MutableStateFlow(prefs.getBoolean(KEY_AUTO_DIM, false))
     val autoDim: StateFlow<Boolean> = _autoDim.asStateFlow()
 
+    private val _aiPolishEnabled = MutableStateFlow(prefs.getBoolean(KEY_AI_POLISH, false))
+    val aiPolishEnabled: StateFlow<Boolean> = _aiPolishEnabled.asStateFlow()
+
     private val _bubbleX = MutableStateFlow(prefs.getInt(KEY_BUBBLE_X, -1))
     val bubbleX: StateFlow<Int> = _bubbleX.asStateFlow()
 
@@ -112,6 +115,11 @@ class AppPreferences(context: Context) {
         _autoDim.value = enabled
     }
 
+    fun setAiPolishEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AI_POLISH, enabled).apply()
+        _aiPolishEnabled.value = enabled
+    }
+
     fun setBubblePosition(x: Int, y: Int) {
         prefs.edit().putInt(KEY_BUBBLE_X, x).putInt(KEY_BUBBLE_Y, y).apply()
         _bubbleX.value = x
@@ -128,6 +136,7 @@ class AppPreferences(context: Context) {
         private const val KEY_PREFER_OFFLINE = "key_prefer_offline"
         private const val KEY_DOCK_TO_EDGE = "key_dock_to_edge"
         private const val KEY_AUTO_DIM = "key_auto_dim"
+        private const val KEY_AI_POLISH = "key_ai_polish"
         private const val KEY_BUBBLE_X = "key_bubble_x"
         private const val KEY_BUBBLE_Y = "key_bubble_y"
 

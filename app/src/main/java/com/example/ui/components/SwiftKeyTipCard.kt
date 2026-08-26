@@ -184,6 +184,44 @@ fun SwiftKeyTipCard(modifier: Modifier = Modifier) {
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Pro tip callout - Long Press Quick Menu
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TouchApp,
+                                contentDescription = "Quick Menu Tip",
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "⚡ কুইক মেনু শর্টকাট: বাবলে লং-প্রেস (চেপে ধরে রাখলে) করে সেটিংসে না গিয়েই এক ক্লিকে Gemini AI প্যারাফ্রেজিং টগল এবং হিস্ট্রি লগ দেখা যাবে!",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
         }

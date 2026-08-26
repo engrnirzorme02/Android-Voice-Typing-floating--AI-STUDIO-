@@ -18,6 +18,9 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Log
@@ -49,6 +52,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class FloatingBubbleService : Service() {
 
@@ -66,6 +70,11 @@ class FloatingBubbleService : Service() {
     private var langBadge: TextView? = null
     private var copiedBadge: LinearLayout? = null
     private var copiedBadgeText: TextView? = null
+    private var quickMenuCard: LinearLayout? = null
+    private var geminiStatusBadge: TextView? = null
+    private var isQuickMenuOpen = false
+    private var isLongPressTriggered = false
+    private var longPressRunnable: Runnable? = null
 
     private lateinit var windowParams: WindowManager.LayoutParams
     private lateinit var speechEngine: SpeechEngine
@@ -418,14 +427,176 @@ class FloatingBubbleService : Service() {
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
+        // Quick Menu Card (Opened on Long-Press)
+        quickMenuCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (12 * density).toInt()
+            setPadding(pad, pad, pad, pad)
+            val cardBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 16 * density
+                setColor(Color.parseColor("#F50F172A")) // Solid dark slate
+                setStroke((1.5f * density).toInt(), Color.parseColor("#38BDF8"))
+            }
+            background = cardBg
+            elevation = 24 * density
+            visibility = View.GONE
+
+            // Header Layout
+            val headerLayout = LinearLayout(this@FloatingBubbleService).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, 0, 0, (6 * density).toInt())
+            }
+            val headerTitle = TextView(this@FloatingBubbleService).apply {
+                text = "⚡ কুইক মেনু (Quick Menu)"
+                setTextColor(Color.WHITE)
+                textSize = 13f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            }
+            val closeBtn = TextView(this@FloatingBubbleService).apply {
+                text = "✕"
+                setTextColor(Color.parseColor("#94A3B8"))
+                textSize = 14f
+                gravity = Gravity.CENTER
+                val p = (4 * density).toInt()
+                setPadding(p * 2, p, p * 2, p)
+                setOnClickListener {
+                    hideQuickMenu()
+                }
+            }
+            headerLayout.addView(headerTitle, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            headerLayout.addView(closeBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            addView(headerLayout)
+
+            // Divider
+            addView(createDivider(density))
+
+            // Option 1: Gemini AI Paraphrasing Toggle
+            val geminiRow = LinearLayout(this@FloatingBubbleService).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                val pV = (8 * density).toInt()
+                val pH = (4 * density).toInt()
+                setPadding(pH, pV, pH, pV)
+                isClickable = true
+                isFocusable = true
+
+                val rowTextLayout = LinearLayout(this@FloatingBubbleService).apply {
+                    orientation = LinearLayout.VERTICAL
+                    val textTitle = TextView(this@FloatingBubbleService).apply {
+                        text = "✨ Gemini AI প্যারাফ্রেজ"
+                        setTextColor(Color.parseColor("#F8FAFC"))
+                        textSize = 12.5f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                    }
+                    val textSub = TextView(this@FloatingBubbleService).apply {
+                        text = "ব্যাকরণ ও ফিলার অটো-ক্লিন"
+                        setTextColor(Color.parseColor("#94A3B8"))
+                        textSize = 10f
+                    }
+                    addView(textTitle)
+                    addView(textSub)
+                }
+
+                geminiStatusBadge = TextView(this@FloatingBubbleService).apply {
+                    textSize = 10.5f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    val bPadH = (8 * density).toInt()
+                    val bPadV = (3 * density).toInt()
+                    setPadding(bPadH, bPadV, bPadH, bPadV)
+                    updateGeminiBadge(this, appPreferences.aiPolishEnabled.value, density)
+                }
+
+                addView(rowTextLayout, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                addView(geminiStatusBadge, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+                setOnClickListener {
+                    val newState = !appPreferences.aiPolishEnabled.value
+                    appPreferences.setAiPolishEnabled(newState)
+                    geminiStatusBadge?.let { updateGeminiBadge(it, newState, density) }
+                    triggerHapticFeedback()
+                    showCopiedBadge(if (newState) "Gemini প্যারাফ্রেজ সক্রিয় ✓" else "Gemini প্যারাফ্রেজ বন্ধ ✕")
+                }
+            }
+            addView(geminiRow)
+
+            // Divider
+            addView(createDivider(density))
+
+            // Option 2: History Log
+            val historyRow = LinearLayout(this@FloatingBubbleService).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                val pV = (8 * density).toInt()
+                val pH = (4 * density).toInt()
+                setPadding(pH, pV, pH, pV)
+                isClickable = true
+                isFocusable = true
+
+                val rowTextLayout = LinearLayout(this@FloatingBubbleService).apply {
+                    orientation = LinearLayout.VERTICAL
+                    val textTitle = TextView(this@FloatingBubbleService).apply {
+                        text = "📜 হিস্ট্রি লগ দেখুন"
+                        setTextColor(Color.parseColor("#F8FAFC"))
+                        textSize = 12.5f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                    }
+                    val textSub = TextView(this@FloatingBubbleService).apply {
+                        text = "আগের সব ট্রান্সক্রিপশন তালিকা"
+                        setTextColor(Color.parseColor("#94A3B8"))
+                        textSize = 10f
+                    }
+                    addView(textTitle)
+                    addView(textSub)
+                }
+
+                val arrowIcon = TextView(this@FloatingBubbleService).apply {
+                    text = "➔"
+                    setTextColor(Color.parseColor("#38BDF8"))
+                    textSize = 13f
+                    setPadding((6 * density).toInt(), 0, 0, 0)
+                }
+
+                addView(rowTextLayout, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                addView(arrowIcon, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+                setOnClickListener {
+                    hideQuickMenu()
+                    triggerHapticFeedback()
+                    val historyIntent = Intent(this@FloatingBubbleService, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra(MainActivity.EXTRA_NAV_TARGET, MainActivity.TARGET_HISTORY)
+                    }
+                    startActivity(historyIntent)
+                }
+            }
+            addView(historyRow)
+        }
+
+        val quickMenuParams = LinearLayout.LayoutParams(
+            (230 * density).toInt(),
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            setMargins(0, (8 * density).toInt(), 0, 0)
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+
         container.addView(bubbleContainer, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        container.addView(quickMenuCard, quickMenuParams)
         container.addView(infoPill, infoPillParams)
         container.addView(copiedBadge, copiedBadgeParams)
 
         floatingRootView?.addView(container, containerParams)
 
-        floatingRootView?.setOnTouchListener { _, event ->
+        bubbleCircle?.setOnTouchListener { _, event ->
             handleTouch(event)
+        }
+
+        floatingRootView?.setOnClickListener {
+            if (isQuickMenuOpen) {
+                hideQuickMenu()
+            }
         }
 
         try {
@@ -464,6 +635,108 @@ class FloatingBubbleService : Service() {
         }
     }
 
+    private fun triggerHapticFeedback() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                vibratorManager?.defaultVibrator?.vibrate(
+                    VibrationEffect.createPredefined(VibrationEffect.EFFECT_HEAVY_CLICK)
+                )
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                vibrator?.vibrate(50)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Haptic trigger error", e)
+        }
+    }
+
+    private fun updateGeminiBadge(badge: TextView, isEnabled: Boolean, density: Float) {
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 10 * density
+            if (isEnabled) {
+                setColor(Color.parseColor("#065F46"))
+                setStroke((1 * density).toInt(), Color.parseColor("#34D399"))
+            } else {
+                setColor(Color.parseColor("#334155"))
+                setStroke((1 * density).toInt(), Color.parseColor("#64748B"))
+            }
+        }
+        badge.background = bg
+        badge.text = if (isEnabled) "চালু (ON)" else "বন্ধ (OFF)"
+        badge.setTextColor(if (isEnabled) Color.parseColor("#34D399") else Color.parseColor("#94A3B8"))
+    }
+
+    private fun createDivider(density: Float): View {
+        return View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
+                setMargins(0, (4 * density).toInt(), 0, (4 * density).toInt())
+            }
+            setBackgroundColor(Color.parseColor("#334155"))
+        }
+    }
+
+    private fun showQuickMenu() {
+        if (isRecording) return
+        isQuickMenuOpen = true
+        val density = resources.displayMetrics.density
+        geminiStatusBadge?.let {
+            updateGeminiBadge(it, appPreferences.aiPolishEnabled.value, density)
+        }
+        
+        updateScreenDimensions()
+        val menuWidthPx = (240 * density).toInt()
+        if (windowParams.x + menuWidthPx > screenWidth) {
+            windowParams.x = maxOf((8 * density).toInt(), screenWidth - menuWidthPx - (8 * density).toInt())
+            try {
+                windowManager?.updateViewLayout(floatingRootView, windowParams)
+            } catch (e: Exception) {
+                Log.e(TAG, "Update layout on quick menu show", e)
+            }
+        }
+
+        quickMenuCard?.visibility = View.VISIBLE
+        val anim = AlphaAnimation(0f, 1f).apply {
+            duration = 200
+            fillAfter = true
+        }
+        quickMenuCard?.startAnimation(anim)
+        infoPill?.visibility = View.GONE
+        copiedBadge?.visibility = View.GONE
+        resetInactivityTimer()
+    }
+
+    private fun hideQuickMenu() {
+        if (!isQuickMenuOpen && quickMenuCard?.visibility != View.VISIBLE) return
+        isQuickMenuOpen = false
+        val anim = AlphaAnimation(1f, 0f).apply {
+            duration = 150
+            setAnimationListener(object : Animation.AnimationListener {
+                override fun onAnimationStart(animation: Animation?) {}
+                override fun onAnimationEnd(animation: Animation?) {
+                    quickMenuCard?.visibility = View.GONE
+                }
+                override fun onAnimationRepeat(animation: Animation?) {}
+            })
+        }
+        quickMenuCard?.startAnimation(anim)
+        resetInactivityTimer()
+    }
+
+    private fun toggleQuickMenu() {
+        if (isQuickMenuOpen) {
+            hideQuickMenu()
+        } else {
+            showQuickMenu()
+        }
+    }
+
     private fun handleTouch(event: MotionEvent): Boolean {
         resetInactivityTimer()
         when (event.action) {
@@ -474,6 +747,17 @@ class FloatingBubbleService : Service() {
                 initialTouchY = event.rawY
                 touchStartTime = System.currentTimeMillis()
                 isDragging = false
+                isLongPressTriggered = false
+
+                longPressRunnable?.let { mainHandler.removeCallbacks(it) }
+                longPressRunnable = Runnable {
+                    if (!isDragging && !isRecording) {
+                        isLongPressTriggered = true
+                        triggerHapticFeedback()
+                        toggleQuickMenu()
+                    }
+                }
+                mainHandler.postDelayed(longPressRunnable!!, 450L)
                 return true
             }
 
@@ -482,7 +766,13 @@ class FloatingBubbleService : Service() {
                 val dy = (event.rawY - initialTouchY).toInt()
 
                 if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                    isDragging = true
+                    if (!isDragging) {
+                        longPressRunnable?.let { mainHandler.removeCallbacks(it) }
+                        isDragging = true
+                        if (isQuickMenuOpen) {
+                            hideQuickMenu()
+                        }
+                    }
                 }
 
                 if (isDragging) {
@@ -498,9 +788,17 @@ class FloatingBubbleService : Service() {
             }
 
             MotionEvent.ACTION_UP -> {
+                longPressRunnable?.let { mainHandler.removeCallbacks(it) }
                 val clickDuration = System.currentTimeMillis() - touchStartTime
-                if (!isDragging && clickDuration < 300) {
-                    toggleRecording()
+
+                if (isLongPressTriggered) {
+                    // Handled by long press gesture
+                } else if (!isDragging && clickDuration < 350) {
+                    if (isQuickMenuOpen) {
+                        hideQuickMenu()
+                    } else {
+                        toggleRecording()
+                    }
                 } else if (isDragging) {
                     if (appPreferences.dockToEdge.value) {
                         snapToNearestEdge()
@@ -508,7 +806,15 @@ class FloatingBubbleService : Service() {
                     appPreferences.setBubblePosition(windowParams.x, windowParams.y)
                 }
                 isDragging = false
+                isLongPressTriggered = false
                 return true
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                longPressRunnable?.let { mainHandler.removeCallbacks(it) }
+                isDragging = false
+                isLongPressTriggered = false
+                return false
             }
         }
         return false
@@ -589,18 +895,31 @@ class FloatingBubbleService : Service() {
     private fun handleTranscriptionSuccess(text: String, language: String, durationMs: Long) {
         isRecording = false
         showPulseAnimation(false)
-        showInfoPill("", false)
 
-        if (appPreferences.autoCopy.value && text.isNotBlank()) {
-            val clip = ClipData.newPlainText("Voice Transcription", text)
-            clipboardManager.setPrimaryClip(clip)
-            showCopiedBadge("কপি হয়েছে: \"${text.take(30)}${if (text.length > 30) "..." else ""}\"")
-        }
+        serviceScope.launch {
+            val finalText = if (appPreferences.aiPolishEnabled.value && text.isNotBlank()) {
+                withContext(Dispatchers.Main) {
+                    showInfoPill("AI সাজাচ্ছে...", true)
+                }
+                val polished = GeminiApiClient.polishText(text).trim()
+                if (polished.isNotBlank()) polished else text
+            } else {
+                text
+            }
 
-        serviceScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.Main) {
+                showInfoPill("", false)
+                if (appPreferences.autoCopy.value && finalText.isNotBlank()) {
+                    val clip = ClipData.newPlainText("Voice Transcription", finalText)
+                    clipboardManager.setPrimaryClip(clip)
+                    showCopiedBadge("কপি হয়েছে: \"${finalText.take(30)}${if (finalText.length > 30) "..." else ""}\"")
+                }
+                updateNotification("ভয়েস টাইপিং সম্পন্ন: \"${finalText.take(20)}\"")
+            }
+
             try {
                 val entity = VoiceHistoryEntity(
-                    text = text,
+                    text = finalText,
                     language = language,
                     durationMs = durationMs
                 )
@@ -609,8 +928,6 @@ class FloatingBubbleService : Service() {
                 Log.e(TAG, "Error saving history to Room DB", e)
             }
         }
-
-        updateNotification("ভয়েস টাইপিং সম্পন্ন: \"${text.take(20)}\"")
     }
 
     private fun handleTranscriptionError(errorMsg: String, isNetworkIssue: Boolean) {
@@ -715,6 +1032,13 @@ class FloatingBubbleService : Service() {
                 resetInactivityTimer()
             }
         }
+        serviceScope.launch {
+            appPreferences.aiPolishEnabled.collect { isEnabled ->
+                geminiStatusBadge?.let {
+                    updateGeminiBadge(it, isEnabled, resources.displayMetrics.density)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -725,6 +1049,8 @@ class FloatingBubbleService : Service() {
         serviceScope.cancel()
 
         hideCopiedBadgeRunnable?.let { mainHandler.removeCallbacks(it) }
+        longPressRunnable?.let { mainHandler.removeCallbacks(it) }
+        inactivityRunnable?.let { mainHandler.removeCallbacks(it) }
 
         if (floatingRootView != null && windowManager != null) {
             try {
