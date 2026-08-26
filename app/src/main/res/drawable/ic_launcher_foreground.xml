@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="20"
+        android:translateY="20"
+        android:scaleX="0.63"
+        android:scaleY="0.63">
+        <!-- Floating Speech Bubble -->
+        <path
+            android:fillColor="#38BDF8"
+            android:pathData="M54,10 C29.1,10 9,28.4 9,51 C9,62.2 14.1,72.3 22.4,79.5 L19.2,95.4 C18.8,97.2 20.6,98.6 22.2,97.7 L39.7,88.1 C44.2,89.9 49,91 54,91 C78.9,91 99,72.6 99,50 C99,28.4 78.9,10 54,10 Z" />
+        <!-- Inner Glow Circle / Bubble Accent -->
+        <path
+            android:fillColor="#0284C7"
+            android:pathData="M54,16 C32.5,16 15,31.7 15,51 C15,60.6 19.3,69.2 26.4,75.4 L23.6,89.1 L38.6,80.9 C43.2,82.6 48.4,83.6 54,83.6 C75.5,83.6 93,68.9 93,50.6 C93,31.7 75.5,16 54,16 Z" />
+        <!-- Microphone Body -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M54,32 C49.6,32 46,35.6 46,40 L46,52 C46,56.4 49.6,60 54,60 C58.4,60 62,56.4 62,52 L62,40 C62,35.6 58.4,32 54,32 Z" />
+        <!-- Microphone Stand Arc -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M69,49 C69,57.3 62.3,64 54,64 C45.7,64 39,57.3 39,49 L35,49 C35,58.4 42.1,66.1 51.3,67.3 L51.3,73 L45,73 L45,77 L63,77 L63,73 L56.7,73 L56.7,67.3 C65.9,66.1 73,58.4 73,49 L69,49 Z" />
+    </group>
+</vector>

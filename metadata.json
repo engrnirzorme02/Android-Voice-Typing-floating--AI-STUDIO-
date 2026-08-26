@@ -1,0 +1,6 @@
+{
+  "name": "Voice Bubble",
+  "description": "Floating voice typing bubble that records speech and auto-copies transcribed text to clipboard for instant 1-tap pasting in SwiftKey & any keyboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
