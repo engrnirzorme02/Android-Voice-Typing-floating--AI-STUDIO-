@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BrightnessMedium
@@ -244,7 +245,7 @@ fun SettingsScreen(
             SettingsSwitchRow(
                 title = "অডিও সংকেত (Sound Beep)",
                 description = "ভয়েস টাইপিং শুরুর সময় বিপ শব্দ শোনা যাবে",
-                icon = Icons.Default.VolumeUp,
+                icon = Icons.AutoMirrored.Filled.VolumeUp,
                 checked = sound,
                 onCheckedChange = { prefs.setSoundFeedback(it) }
             )

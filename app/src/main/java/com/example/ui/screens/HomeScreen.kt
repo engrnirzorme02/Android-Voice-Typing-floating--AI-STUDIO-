@@ -68,6 +68,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import com.example.service.GeminiApiClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -381,23 +384,40 @@ fun HomeScreen(
                                     onPartialResult = { partial ->
                                         inAppTranscription = partial
                                     },
-                                    onFinalResult = { finalResult, lang, durationMs ->
-                                        inAppTranscription = finalResult
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        val clip = ClipData.newPlainText("Voice Transcription", finalResult)
-                                        clipboard.setPrimaryClip(clip)
-                                        justCopiedInApp = true
+                                    onFinalResult = { rawResult, lang, durationMs ->
+                                        inAppTranscription = rawResult
+                                        justCopiedInApp = false
 
                                         scope.launch {
-                                            repo.insert(
-                                                VoiceHistoryEntity(
-                                                    text = finalResult,
-                                                    language = lang,
-                                                    durationMs = durationMs
+                                            val finalText = if (prefs.aiPolishEnabled.value && rawResult.isNotBlank()) {
+                                                inAppTranscription = "$rawResult\n\n✨ AI পরিমার্জন করা হচ্ছে..."
+                                                val polished = GeminiApiClient.polishText(rawResult).trim()
+                                                if (polished.isNotBlank()) polished else rawResult
+                                            } else {
+                                                rawResult
+                                            }
+
+                                            inAppTranscription = finalText
+                                            if (prefs.autoCopy.value && finalText.isNotBlank()) {
+                                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                val clip = ClipData.newPlainText("Voice Transcription", finalText)
+                                                clipboard.setPrimaryClip(clip)
+                                                justCopiedInApp = true
+                                                Toast.makeText(context, "ক্লিপবোর্ডে কপি হয়েছে! ✓", Toast.LENGTH_SHORT).show()
+                                            }
+
+                                            try {
+                                                repo.insert(
+                                                    VoiceHistoryEntity(
+                                                        text = finalText,
+                                                        language = lang,
+                                                        durationMs = durationMs
+                                                    )
                                                 )
-                                            )
+                                            } catch (e: Exception) {
+                                                // Handle gracefully
+                                            }
                                         }
-                                        Toast.makeText(context, "ক্লিপবোর্ডে কপি হয়েছে! ✓", Toast.LENGTH_SHORT).show()
                                     },
                                     onErrorOccurred = { errorMsg, _ ->
                                         inAppTranscription = "ত্রুটি: $errorMsg"
