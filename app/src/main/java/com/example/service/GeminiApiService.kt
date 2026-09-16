@@ -1,7 +1,6 @@
 package com.example.service
 
 import com.example.BuildConfig
-import com.squareup.moshi.Json
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
@@ -47,9 +46,9 @@ object GeminiApiClient {
     private const val BASE_URL = "https://generativelanguage.googleapis.com/"
 
     private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(60, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .writeTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
         .build()
 
     private val moshi = Moshi.Builder()
@@ -77,7 +76,7 @@ object GeminiApiClient {
             ),
             systemInstruction = Content(
                 parts = listOf(
-                    Part(text = "You are a helpful assistant that polishes spoken Bengali text. The user has spoken this text via voice typing. Your task is to paraphrase it to make it sound natural, remove filler words (like 'am', 'er', etc.), and correct any grammatical or contextual mistakes so it looks like a perfectly typed Bengali sentence. Provide ONLY the polished text as output without any conversational prefix or suffix.")
+                    Part(text = "Polish this voice transcript in its original language. Preserve the speaker's meaning, remove obvious filler words, add sensible punctuation, and do not invent information. Return only the polished transcript with no explanation.")
                 )
             )
         )
@@ -85,8 +84,7 @@ object GeminiApiClient {
         try {
             val response = service.generateContent(apiKey, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text ?: text
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             text // fallback to original text on failure
         }
     }

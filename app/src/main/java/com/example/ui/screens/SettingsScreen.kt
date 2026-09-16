@@ -85,7 +85,6 @@ fun SettingsScreen(
     val selectedLangCode by prefs.selectedLanguage.collectAsState()
     val bubbleSize by prefs.bubbleSizeDp.collectAsState()
     val bubbleOpacity by prefs.bubbleOpacity.collectAsState()
-    val autoCopy by prefs.autoCopy.collectAsState()
     val haptic by prefs.hapticFeedback.collectAsState()
     val sound by prefs.soundFeedback.collectAsState()
     val preferOffline by prefs.preferOffline.collectAsState()
@@ -203,17 +202,6 @@ fun SettingsScreen(
                 subtitle = "${currentLang.flag} ${currentLang.displayName}",
                 icon = Icons.Default.Language,
                 onClick = { showLanguageDialog = true }
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-
-            // Auto Copy Switch
-            SettingsSwitchRow(
-                title = "অটোমেটিক ক্লিপবোর্ডে কপি (Auto Copy)",
-                description = "কথা বলা শেষ হলে নিজে থেকেই লেখা ক্লিপবোর্ডে কপি হবে",
-                icon = Icons.Default.ContentCopy,
-                checked = autoCopy,
-                onCheckedChange = { prefs.setAutoCopy(it) }
             )
 
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))

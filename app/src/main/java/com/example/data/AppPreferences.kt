@@ -49,9 +49,6 @@ class AppPreferences(context: Context) {
     private val _soundFeedback = MutableStateFlow(prefs.getBoolean(KEY_SOUND, true))
     val soundFeedback: StateFlow<Boolean> = _soundFeedback.asStateFlow()
 
-    private val _autoCopy = MutableStateFlow(prefs.getBoolean(KEY_AUTO_COPY, true))
-    val autoCopy: StateFlow<Boolean> = _autoCopy.asStateFlow()
-
     private val _preferOffline = MutableStateFlow(prefs.getBoolean(KEY_PREFER_OFFLINE, false))
     val preferOffline: StateFlow<Boolean> = _preferOffline.asStateFlow()
 
@@ -95,11 +92,6 @@ class AppPreferences(context: Context) {
         _soundFeedback.value = enabled
     }
 
-    fun setAutoCopy(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTO_COPY, enabled).apply()
-        _autoCopy.value = enabled
-    }
-
     fun setPreferOffline(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_PREFER_OFFLINE, enabled).apply()
         _preferOffline.value = enabled
@@ -132,7 +124,6 @@ class AppPreferences(context: Context) {
         private const val KEY_BUBBLE_OPACITY = "key_bubble_opacity"
         private const val KEY_HAPTIC = "key_haptic"
         private const val KEY_SOUND = "key_sound"
-        private const val KEY_AUTO_COPY = "key_auto_copy"
         private const val KEY_PREFER_OFFLINE = "key_prefer_offline"
         private const val KEY_DOCK_TO_EDGE = "key_dock_to_edge"
         private const val KEY_AUTO_DIM = "key_auto_dim"

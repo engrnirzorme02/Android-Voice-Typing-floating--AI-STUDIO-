@@ -70,7 +70,8 @@ class SpeechEngine(private val context: Context) {
         onFinalResult: ((String, String, Long) -> Unit)? = null,
         onErrorOccurred: ((String, Boolean) -> Unit)? = null
     ) {
-        stopListening()
+        // A new session must not retain a recognizer from an interrupted prior session.
+        cancelListening()
 
         if (!isRecognitionAvailable()) {
             val errorMsg = "Speech recognition is not available on this device. Please install or enable Google Speech Services."
@@ -148,6 +149,7 @@ class SpeechEngine(private val context: Context) {
                             triggerHapticDouble()
                         }
                         onErrorOccurred?.invoke(errorMsg, isNetworkIssue)
+                        destroyRecognizer()
                     }
 
                     override fun onResults(results: Bundle?) {
@@ -169,6 +171,7 @@ class SpeechEngine(private val context: Context) {
                             _speechState.value = SpeechState.Error(msg, SpeechRecognizer.ERROR_NO_MATCH, false)
                             onErrorOccurred?.invoke(msg, false)
                         }
+                        destroyRecognizer()
                     }
 
                     override fun onPartialResults(partialResults: Bundle?) {
@@ -195,10 +198,8 @@ class SpeechEngine(private val context: Context) {
     fun stopListening() {
         try {
             speechRecognizer?.stopListening()
-            speechRecognizer?.destroy()
-            speechRecognizer = null
         } catch (e: Exception) {
-            Log.w(TAG, "Error cleaning up speech recognizer", e)
+            Log.w(TAG, "Error stopping speech recognizer", e)
         }
         _currentRms.value = 0f
     }
@@ -206,13 +207,29 @@ class SpeechEngine(private val context: Context) {
     fun cancelListening() {
         try {
             speechRecognizer?.cancel()
-            speechRecognizer?.destroy()
-            speechRecognizer = null
+            destroyRecognizer()
         } catch (e: Exception) {
             Log.w(TAG, "Error cancelling speech recognizer", e)
         }
         _speechState.value = SpeechState.Idle
         _currentRms.value = 0f
+    }
+
+    /** Releases platform resources when the owner is permanently disposed. */
+    fun release() {
+        cancelListening()
+        toneGenerator?.release()
+        toneGenerator = null
+    }
+
+    private fun destroyRecognizer() {
+        try {
+            speechRecognizer?.destroy()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error destroying speech recognizer", e)
+        } finally {
+            speechRecognizer = null
+        }
     }
 
     private fun playBeep(toneType: Int) {

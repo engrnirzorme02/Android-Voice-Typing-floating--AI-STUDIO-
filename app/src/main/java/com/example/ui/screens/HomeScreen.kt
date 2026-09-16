@@ -342,7 +342,7 @@ fun HomeScreen(
                 ) {
                     if (inAppTranscription.isBlank()) {
                         Text(
-                            text = if (isTestListening) "শুনছি... আপনার কথা বলুন..." else "কথা বলতে নিচের মাইক বাটনে প্রেস করুন। কথা শেষ হলে লেখাটি সাথে সাথে কপি হয়ে যাবে।",
+                            text = if (isTestListening) "শুনছি... আপনার কথা বলুন..." else "কথা বলতে নিচের মাইক বাটনে প্রেস করুন। ফলাফল ইতিহাসে সংরক্ষিত হবে; কপি করতে Copy চাপুন।",
                             style = MaterialTheme.typography.bodyMedium,
                             color = if (isTestListening) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             lineHeight = 20.sp
@@ -383,11 +383,6 @@ fun HomeScreen(
                                     },
                                     onFinalResult = { finalResult, lang, durationMs ->
                                         inAppTranscription = finalResult
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        val clip = ClipData.newPlainText("Voice Transcription", finalResult)
-                                        clipboard.setPrimaryClip(clip)
-                                        justCopiedInApp = true
-
                                         scope.launch {
                                             repo.insert(
                                                 VoiceHistoryEntity(
@@ -397,7 +392,7 @@ fun HomeScreen(
                                                 )
                                             )
                                         }
-                                        Toast.makeText(context, "ক্লিপবোর্ডে কপি হয়েছে! ✓", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "ট্রান্সক্রিপশন সংরক্ষিত হয়েছে", Toast.LENGTH_SHORT).show()
                                     },
                                     onErrorOccurred = { errorMsg, _ ->
                                         inAppTranscription = "ত্রুটি: $errorMsg"

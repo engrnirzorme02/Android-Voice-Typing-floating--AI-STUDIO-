@@ -39,7 +39,7 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
-import com.example.data.AppDatabase
+import com.example.VoiceBubbleApp
 import com.example.data.AppPreferences
 import com.example.data.SupportedLanguages
 import com.example.data.VoiceHistoryEntity
@@ -90,6 +90,7 @@ class FloatingBubbleService : Service() {
     private var touchStartTime = 0L
     private var isDragging = false
     private var isRecording = false
+    private var latestTranscript: String? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var hideCopiedBadgeRunnable: Runnable? = null
@@ -136,6 +137,17 @@ class FloatingBubbleService : Service() {
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
+        if (!Settings.canDrawOverlays(this)) {
+            Log.w(TAG, "Overlay permission is missing; refusing to start service")
+            stopSelf()
+            return
+        }
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            Log.w(TAG, "Microphone permission is missing; refusing to start service")
+            stopSelf()
+            return
+        }
+
         updateScreenDimensions()
         createNotificationChannel()
 
@@ -148,13 +160,8 @@ class FloatingBubbleService : Service() {
 
         _isServiceRunning.value = true
 
-        if (Settings.canDrawOverlays(this)) {
-            initFloatingOverlay()
-            observeSpeechState()
-        } else {
-            Log.w(TAG, "Overlay permission not granted!")
-            stopSelf()
-        }
+        initFloatingOverlay()
+        observeSpeechState()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -214,6 +221,16 @@ class FloatingBubbleService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val recordIntent = Intent(this, FloatingBubbleService::class.java).apply {
+            action = ACTION_TOGGLE_RECORD
+        }
+        val recordPendingIntent = PendingIntent.getService(
+            this,
+            2,
+            recordIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val langCode = appPreferences.selectedLanguage.value
         val lang = SupportedLanguages.getLanguageByCode(langCode)
 
@@ -223,6 +240,7 @@ class FloatingBubbleService : Service() {
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
+            .addAction(android.R.drawable.ic_btn_speak_now, "Record", recordPendingIntent)
             .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Stop", stopPendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -472,6 +490,26 @@ class FloatingBubbleService : Service() {
             // Divider
             addView(createDivider(density))
 
+            val copyLatestRow = quickMenuRow(
+                title = "📋 সর্বশেষ লেখা কপি করুন",
+                subtitle = "শুধু আপনার ট্যাপে ক্লিপবোর্ডে কপি হবে",
+                density = density
+            ) {
+                copyLatestTranscript()
+            }
+            addView(copyLatestRow)
+            addView(createDivider(density))
+
+            val shareLatestRow = quickMenuRow(
+                title = "↗ লেখা পাঠান / শেয়ার করুন",
+                subtitle = "Clipboard অ্যাপসহ একটি গন্তব্য বেছে নিন",
+                density = density
+            ) {
+                shareLatestTranscript()
+            }
+            addView(shareLatestRow)
+            addView(createDivider(density))
+
             // Option 1: Gemini AI Paraphrasing Toggle
             val geminiRow = LinearLayout(this@FloatingBubbleService).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -682,6 +720,35 @@ class FloatingBubbleService : Service() {
         }
     }
 
+    private fun quickMenuRow(
+        title: String,
+        subtitle: String,
+        density: Float,
+        onClick: () -> Unit
+    ): LinearLayout = LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding((4 * density).toInt(), (8 * density).toInt(), (4 * density).toInt(), (8 * density).toInt())
+        isClickable = true
+        isFocusable = true
+        val labels = LinearLayout(this@FloatingBubbleService).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(this@FloatingBubbleService).apply {
+                text = title
+                setTextColor(Color.parseColor("#F8FAFC"))
+                textSize = 12.5f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            })
+            addView(TextView(this@FloatingBubbleService).apply {
+                text = subtitle
+                setTextColor(Color.parseColor("#94A3B8"))
+                textSize = 10f
+            })
+        }
+        addView(labels, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        setOnClickListener { onClick() }
+    }
+
     private fun showQuickMenu() {
         if (isRecording) return
         isQuickMenuOpen = true
@@ -850,6 +917,10 @@ class FloatingBubbleService : Service() {
     }
 
     private fun startRecording() {
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            handleTranscriptionError("মাইক্রোফোন পারমিশন প্রয়োজন", false)
+            return
+        }
         isRecording = true
         resetInactivityTimer()
         showPulseAnimation(true)
@@ -909,11 +980,8 @@ class FloatingBubbleService : Service() {
 
             withContext(Dispatchers.Main) {
                 showInfoPill("", false)
-                if (appPreferences.autoCopy.value && finalText.isNotBlank()) {
-                    val clip = ClipData.newPlainText("Voice Transcription", finalText)
-                    clipboardManager.setPrimaryClip(clip)
-                    showCopiedBadge("কপি হয়েছে: \"${finalText.take(30)}${if (finalText.length > 30) "..." else ""}\"")
-                }
+                latestTranscript = finalText
+                showCopiedBadge("সংরক্ষিত হয়েছে — লং-প্রেসে Copy বা Send করুন")
                 updateNotification("ভয়েস টাইপিং সম্পন্ন: \"${finalText.take(20)}\"")
             }
 
@@ -923,7 +991,7 @@ class FloatingBubbleService : Service() {
                     language = language,
                     durationMs = durationMs
                 )
-                AppDatabase.getDatabase(this@FloatingBubbleService).voiceHistoryDao().insert(entity)
+                VoiceBubbleApp.instance.repository.insert(entity)
             } catch (e: Exception) {
                 Log.e(TAG, "Error saving history to Room DB", e)
             }
@@ -1007,6 +1075,37 @@ class FloatingBubbleService : Service() {
         mainHandler.postDelayed(hideCopiedBadgeRunnable!!, 2500)
     }
 
+    private fun copyLatestTranscript() {
+        val transcript = latestTranscript
+        if (transcript.isNullOrBlank()) {
+            showCopiedBadge("কপি করার মতো কোনো লেখা নেই")
+            return
+        }
+        clipboardManager.setPrimaryClip(ClipData.newPlainText("Voice Transcription", transcript))
+        if (appPreferences.hapticFeedback.value) triggerHapticFeedback()
+        showCopiedBadge("ক্লিপবোর্ডে কপি হয়েছে ✓")
+        hideQuickMenu()
+    }
+
+    private fun shareLatestTranscript() {
+        val transcript = latestTranscript
+        if (transcript.isNullOrBlank()) {
+            showCopiedBadge("পাঠানোর মতো কোনো লেখা নেই")
+            return
+        }
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, transcript)
+        }
+        try {
+            startActivity(Intent.createChooser(sendIntent, "Transcript পাঠান").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            hideQuickMenu()
+        } catch (e: Exception) {
+            Log.w(TAG, "No application can receive shared transcript", e)
+            showCopiedBadge("কোনো শেয়ার অ্যাপ পাওয়া যায়নি")
+        }
+    }
+
     private fun updateNotification(text: String) {
         val manager = getSystemService(NotificationManager::class.java)
         manager?.notify(NOTIFICATION_ID, createNotification(text))
@@ -1045,7 +1144,7 @@ class FloatingBubbleService : Service() {
         super.onDestroy()
         Log.d(TAG, "FloatingBubbleService onDestroy")
         _isServiceRunning.value = false
-        speechEngine.cancelListening()
+        speechEngine.release()
         serviceScope.cancel()
 
         hideCopiedBadgeRunnable?.let { mainHandler.removeCallbacks(it) }
