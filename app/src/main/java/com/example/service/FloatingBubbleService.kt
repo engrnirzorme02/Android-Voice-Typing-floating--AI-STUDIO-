@@ -10,6 +10,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -174,7 +175,10 @@ class FloatingBubbleService : Service() {
                 toggleRecording()
             }
         }
-        return START_STICKY
+        // A microphone foreground service needs while-in-use microphone access. Do not
+        // ask Android to recreate it from an arbitrary background state after a kill;
+        // the visible activity is the legal, user-initiated start point.
+        return START_NOT_STICKY
     }
 
     private fun updateScreenDimensions() {
@@ -1096,6 +1100,10 @@ class FloatingBubbleService : Service() {
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, transcript)
+        }
+        if (packageManager.resolveActivity(sendIntent, PackageManager.MATCH_DEFAULT_ONLY) == null) {
+            showCopiedBadge("কোনো শেয়ার অ্যাপ পাওয়া যায়নি")
+            return
         }
         try {
             startActivity(Intent.createChooser(sendIntent, "Transcript পাঠান").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

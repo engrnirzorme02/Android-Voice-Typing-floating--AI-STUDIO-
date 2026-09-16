@@ -15,4 +15,5 @@ After a transcript is produced, a user can long-press the floating bubble and ch
 Any installed Clipboard application can register a standard `ACTION_SEND` text
 receiver and will appear in that chooser. If it is not installed, the user can choose
 another compatible app; Voice Bubble's Copy action and local Room history remain
-available. No transcript is sent without the user's tap.
+available. Voice Bubble verifies that the intent has a compatible handler before
+opening the chooser. No transcript is sent without the user's tap.

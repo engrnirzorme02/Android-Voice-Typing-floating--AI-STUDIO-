@@ -117,7 +117,7 @@ fun HomeScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            testSpeechEngine.stopListening()
+            testSpeechEngine.release()
         }
     }
 

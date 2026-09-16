@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -264,7 +265,15 @@ fun HistoryScreen(
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_TEXT, item.text)
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "শেয়ার করুন"))
+                            if (context.packageManager.resolveActivity(
+                                    shareIntent,
+                                    PackageManager.MATCH_DEFAULT_ONLY
+                                ) != null
+                            ) {
+                                context.startActivity(Intent.createChooser(shareIntent, "শেয়ার করুন"))
+                            } else {
+                                Toast.makeText(context, "কোনো শেয়ার অ্যাপ পাওয়া যায়নি", Toast.LENGTH_SHORT).show()
+                            }
                         },
                         onToggleFavorite = {
                             scope.launch {
