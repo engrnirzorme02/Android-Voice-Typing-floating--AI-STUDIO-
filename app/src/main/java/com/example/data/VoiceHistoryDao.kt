@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,14 @@ interface VoiceHistoryDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: VoiceHistoryEntity): Long
+
+    @Query("DELETE FROM voice_history WHERE id NOT IN (SELECT id FROM voice_history ORDER BY timestamp DESC LIMIT :maxEntries)")
+    suspend fun trimTo(maxEntries: Int)
+
+    @Transaction
+    suspend fun insertAndTrim(item: VoiceHistoryEntity, maxEntries: Int): Long {
+        return insert(item).also { trimTo(maxEntries) }
+    }
 
     @Query("DELETE FROM voice_history WHERE id = :id")
     suspend fun deleteById(id: Long)
