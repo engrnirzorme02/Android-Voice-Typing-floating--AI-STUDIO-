@@ -43,6 +43,9 @@ class AppPreferences(context: Context) {
     private val _bubbleOpacity = MutableStateFlow(prefs.getFloat(KEY_BUBBLE_OPACITY, 0.95f))
     val bubbleOpacity: StateFlow<Float> = _bubbleOpacity.asStateFlow()
 
+    private val _bubbleColorTheme = MutableStateFlow(prefs.getString(KEY_BUBBLE_COLOR_THEME, "indigo_ocean") ?: "indigo_ocean")
+    val bubbleColorTheme: StateFlow<String> = _bubbleColorTheme.asStateFlow()
+
     private val _hapticFeedback = MutableStateFlow(prefs.getBoolean(KEY_HAPTIC, true))
     val hapticFeedback: StateFlow<Boolean> = _hapticFeedback.asStateFlow()
 
@@ -83,6 +86,15 @@ class AppPreferences(context: Context) {
     fun setBubbleOpacity(opacity: Float) {
         prefs.edit().putFloat(KEY_BUBBLE_OPACITY, opacity).apply()
         _bubbleOpacity.value = opacity
+    }
+
+    fun setBubbleColorTheme(themeId: String) {
+        prefs.edit().putString(KEY_BUBBLE_COLOR_THEME, themeId).apply()
+        _bubbleColorTheme.value = themeId
+    }
+
+    fun getSelectedColorTheme(): BubbleTheme {
+        return BubbleThemes.getThemeById(_bubbleColorTheme.value)
     }
 
     fun setHapticFeedback(enabled: Boolean) {
@@ -130,6 +142,7 @@ class AppPreferences(context: Context) {
         private const val KEY_LANGUAGE = "key_language"
         private const val KEY_BUBBLE_SIZE = "key_bubble_size"
         private const val KEY_BUBBLE_OPACITY = "key_bubble_opacity"
+        private const val KEY_BUBBLE_COLOR_THEME = "key_bubble_color_theme"
         private const val KEY_HAPTIC = "key_haptic"
         private const val KEY_SOUND = "key_sound"
         private const val KEY_AUTO_COPY = "key_auto_copy"

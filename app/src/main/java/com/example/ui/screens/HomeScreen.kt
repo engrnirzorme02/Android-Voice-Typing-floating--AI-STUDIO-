@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -76,7 +78,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.VoiceBubbleApp
+import com.example.data.BubbleThemes
 import com.example.data.SupportedLanguages
+import com.example.data.UndoRedoManager
 import com.example.data.VoiceHistoryEntity
 import com.example.service.FloatingBubbleService
 import com.example.speech.SpeechEngine
@@ -108,6 +112,11 @@ fun HomeScreen(
     val selectedLangCode by prefs.selectedLanguage.collectAsState()
     val currentLang = remember(selectedLangCode) { SupportedLanguages.getLanguageByCode(selectedLangCode) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+
+    val canUndo by UndoRedoManager.canUndo.collectAsState()
+    val canRedo by UndoRedoManager.canRedo.collectAsState()
+    val bubbleColorTheme by prefs.bubbleColorTheme.collectAsState()
+    val currentTheme = remember(bubbleColorTheme) { BubbleThemes.getThemeById(bubbleColorTheme) }
 
     // In-App Test Pad State
     val testSpeechEngine = remember { SpeechEngine(context) }
@@ -162,7 +171,7 @@ fun HomeScreen(
                     ) {
                         // Animated Bubble Preview Circle
                         val bubbleColor by animateColorAsState(
-                            targetValue = if (isServiceRunning) Color(0xFF06B6D4) else MaterialTheme.colorScheme.outline,
+                            targetValue = if (isServiceRunning) currentTheme.composeAccentColor else MaterialTheme.colorScheme.outline,
                             label = "bubble_color"
                         )
                         Surface(
@@ -175,7 +184,7 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = if (isServiceRunning) Icons.Default.Mic else Icons.Default.MicOff,
                                     contentDescription = "Bubble Status",
-                                    tint = if (isServiceRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = if (isServiceRunning) currentTheme.composeAccentColor else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(28.dp)
                                 )
                             }
@@ -398,6 +407,9 @@ fun HomeScreen(
                                             }
 
                                             inAppTranscription = finalText
+                                            if (finalText.isNotBlank()) {
+                                                UndoRedoManager.recordInput(context, finalText)
+                                            }
                                             if (prefs.autoCopy.value && finalText.isNotBlank()) {
                                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                                 val clip = ClipData.newPlainText("Voice Transcription", finalText)
@@ -422,7 +434,7 @@ fun HomeScreen(
                                     onErrorOccurred = { errorMsg, _ ->
                                         inAppTranscription = "ত্রুটি: $errorMsg"
                                     }
-                                )
+                                 )
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -442,6 +454,42 @@ fun HomeScreen(
                         Text(
                             text = if (isTestListening) "থামুন (Stop)" else "কথা বলুন (Tap to Speak)",
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Undo Button
+                    IconButton(
+                        onClick = {
+                            val res = UndoRedoManager.undo(context)
+                            inAppTranscription = res.restoredText ?: ""
+                            justCopiedInApp = false
+                            Toast.makeText(context, res.userMessage, Toast.LENGTH_SHORT).show()
+                        },
+                        enabled = canUndo,
+                        modifier = Modifier.testTag("test_pad_undo_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Undo,
+                            contentDescription = "Undo",
+                            tint = if (canUndo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                        )
+                    }
+
+                    // Redo Button
+                    IconButton(
+                        onClick = {
+                            val res = UndoRedoManager.redo(context)
+                            inAppTranscription = res.restoredText ?: ""
+                            justCopiedInApp = false
+                            Toast.makeText(context, res.userMessage, Toast.LENGTH_SHORT).show()
+                        },
+                        enabled = canRedo,
+                        modifier = Modifier.testTag("test_pad_redo_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Redo,
+                            contentDescription = "Redo",
+                            tint = if (canRedo) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
                         )
                     }
 

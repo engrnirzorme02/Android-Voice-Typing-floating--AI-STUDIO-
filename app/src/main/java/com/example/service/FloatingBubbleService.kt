@@ -41,7 +41,9 @@ import com.example.MainActivity
 import com.example.R
 import com.example.data.AppDatabase
 import com.example.data.AppPreferences
+import com.example.data.BubbleThemes
 import com.example.data.SupportedLanguages
+import com.example.data.UndoRedoManager
 import com.example.data.VoiceHistoryEntity
 import com.example.speech.SpeechEngine
 import com.example.speech.SpeechState
@@ -70,8 +72,12 @@ class FloatingBubbleService : Service() {
     private var langBadge: TextView? = null
     private var copiedBadge: LinearLayout? = null
     private var copiedBadgeText: TextView? = null
+    private var undoBadgeBtn: TextView? = null
     private var quickMenuCard: LinearLayout? = null
     private var geminiStatusBadge: TextView? = null
+    private var quickMenuUndoBtn: TextView? = null
+    private var quickMenuRedoBtn: TextView? = null
+    private var quickMenuUndoSubtitle: TextView? = null
     private var isQuickMenuOpen = false
     private var isLongPressTriggered = false
     private var longPressRunnable: Runnable? = null
@@ -275,11 +281,13 @@ class FloatingBubbleService : Service() {
             clipToPadding = false
         }
 
+        val currentTheme = appPreferences.getSelectedColorTheme()
         pulseRing = View(this).apply {
             val ringDrawable = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#4438BDF8"))
-                setStroke((3 * density).toInt(), Color.parseColor("#8038BDF8"))
+                val rawAccent = currentTheme.accentColorHex.removePrefix("#")
+                setColor(Color.parseColor("#44$rawAccent"))
+                setStroke((3 * density).toInt(), currentTheme.ringColorInt)
             }
             background = ringDrawable
             visibility = View.GONE
@@ -288,7 +296,7 @@ class FloatingBubbleService : Service() {
         bubbleCircle = FrameLayout(this).apply {
             val bgDrawable = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.parseColor("#4F46E5"), Color.parseColor("#06B6D4"))
+                intArrayOf(currentTheme.startColorInt, currentTheme.endColorInt)
             ).apply {
                 shape = GradientDrawable.OVAL
                 setStroke((2 * density).toInt(), Color.parseColor("#FFFFFF"))
@@ -401,8 +409,41 @@ class FloatingBubbleService : Service() {
             textSize = 12f
             setPadding((4 * density).toInt(), 0, 0, 0)
         }
+
+        undoBadgeBtn = TextView(this).apply {
+            text = " ↶ আনডু "
+            setTextColor(Color.parseColor("#FEF08A"))
+            textSize = 11f
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            val pV = (2 * density).toInt()
+            val pH = (6 * density).toInt()
+            setPadding(pH, pV, pH, pV)
+            val btnBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 10 * density
+                setColor(Color.parseColor("#33FFFFFF"))
+                setStroke((1 * density).toInt(), Color.parseColor("#FDE047"))
+            }
+            background = btnBg
+            isClickable = true
+            isFocusable = true
+            visibility = View.GONE
+            setOnClickListener {
+                val result = UndoRedoManager.undo(this@FloatingBubbleService)
+                triggerHapticFeedback()
+                showCopiedBadge(result.userMessage, showUndo = false)
+            }
+        }
+
         copiedBadge?.addView(checkIcon, LinearLayout.LayoutParams((18 * density).toInt(), (18 * density).toInt()))
         copiedBadge?.addView(copiedBadgeText)
+        val undoParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            setMargins((8 * density).toInt(), 0, 0, 0)
+        }
+        copiedBadge?.addView(undoBadgeBtn, undoParams)
 
         val containerParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -472,7 +513,79 @@ class FloatingBubbleService : Service() {
             // Divider
             addView(createDivider(density))
 
-            // Option 1: Gemini AI Paraphrasing Toggle
+            // Option 1: Undo & Redo Quick Actions
+            val undoRedoLayout = LinearLayout(this@FloatingBubbleService).apply {
+                orientation = LinearLayout.VERTICAL
+                val pV = (6 * density).toInt()
+                val pH = (4 * density).toInt()
+                setPadding(pH, pV, pH, pV)
+
+                val undoHeader = TextView(this@FloatingBubbleService).apply {
+                    text = "↶ আনডু ও ↷ রি-ডু (Undo & Redo)"
+                    setTextColor(Color.parseColor("#F8FAFC"))
+                    textSize = 12.5f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                }
+                quickMenuUndoSubtitle = TextView(this@FloatingBubbleService).apply {
+                    text = "আগের ভয়েস ইনপুট পরিবর্তন করুন"
+                    setTextColor(Color.parseColor("#94A3B8"))
+                    textSize = 10f
+                    setPadding(0, 0, 0, (6 * density).toInt())
+                }
+                addView(undoHeader)
+                addView(quickMenuUndoSubtitle)
+
+                val buttonsRow = LinearLayout(this@FloatingBubbleService).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+
+                quickMenuUndoBtn = TextView(this@FloatingBubbleService).apply {
+                    text = "↶ Undo"
+                    textSize = 11.5f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    gravity = Gravity.CENTER
+                    val p = (6 * density).toInt()
+                    setPadding(p * 2, p, p * 2, p)
+                    setOnClickListener {
+                        val res = UndoRedoManager.undo(this@FloatingBubbleService)
+                        triggerHapticFeedback()
+                        updateUndoRedoQuickButtons()
+                        showCopiedBadge(res.userMessage, showUndo = false)
+                    }
+                }
+
+                quickMenuRedoBtn = TextView(this@FloatingBubbleService).apply {
+                    text = "↷ Redo"
+                    textSize = 11.5f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    gravity = Gravity.CENTER
+                    val p = (6 * density).toInt()
+                    setPadding(p * 2, p, p * 2, p)
+                    setOnClickListener {
+                        val res = UndoRedoManager.redo(this@FloatingBubbleService)
+                        triggerHapticFeedback()
+                        updateUndoRedoQuickButtons()
+                        showCopiedBadge(res.userMessage, showUndo = false)
+                    }
+                }
+
+                val btnParams1 = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(0, 0, (4 * density).toInt(), 0)
+                }
+                val btnParams2 = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins((4 * density).toInt(), 0, 0, 0)
+                }
+                buttonsRow.addView(quickMenuUndoBtn, btnParams1)
+                buttonsRow.addView(quickMenuRedoBtn, btnParams2)
+                addView(buttonsRow)
+            }
+            addView(undoRedoLayout)
+
+            // Divider
+            addView(createDivider(density))
+
+            // Option 2: Gemini AI Paraphrasing Toggle
             val geminiRow = LinearLayout(this@FloatingBubbleService).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -572,6 +685,58 @@ class FloatingBubbleService : Service() {
                 }
             }
             addView(historyRow)
+
+            // Divider
+            addView(createDivider(density))
+
+            // Option 4: Customize Bubble Appearance
+            val customizeRow = LinearLayout(this@FloatingBubbleService).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                val pV = (8 * density).toInt()
+                val pH = (4 * density).toInt()
+                setPadding(pH, pV, pH, pV)
+                isClickable = true
+                isFocusable = true
+
+                val rowTextLayout = LinearLayout(this@FloatingBubbleService).apply {
+                    orientation = LinearLayout.VERTICAL
+                    val textTitle = TextView(this@FloatingBubbleService).apply {
+                        text = "🎨 বাবল কাস্টমাইজেশন"
+                        setTextColor(Color.parseColor("#F8FAFC"))
+                        textSize = 12.5f
+                        setTypeface(null, android.graphics.Typeface.BOLD)
+                    }
+                    val textSub = TextView(this@FloatingBubbleService).apply {
+                        text = "আকার, কালার ও স্বচ্ছতা নির্ধারণ"
+                        setTextColor(Color.parseColor("#94A3B8"))
+                        textSize = 10f
+                    }
+                    addView(textTitle)
+                    addView(textSub)
+                }
+
+                val arrowIcon = TextView(this@FloatingBubbleService).apply {
+                    text = "➔"
+                    setTextColor(Color.parseColor("#38BDF8"))
+                    textSize = 13f
+                    setPadding((6 * density).toInt(), 0, 0, 0)
+                }
+
+                addView(rowTextLayout, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                addView(arrowIcon, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+
+                setOnClickListener {
+                    hideQuickMenu()
+                    triggerHapticFeedback()
+                    val settingsIntent = Intent(this@FloatingBubbleService, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra(MainActivity.EXTRA_NAV_TARGET, MainActivity.TARGET_SETTINGS)
+                    }
+                    startActivity(settingsIntent)
+                }
+            }
+            addView(customizeRow)
         }
 
         val quickMenuParams = LinearLayout.LayoutParams(
@@ -689,6 +854,7 @@ class FloatingBubbleService : Service() {
         geminiStatusBadge?.let {
             updateGeminiBadge(it, appPreferences.aiPolishEnabled.value, density)
         }
+        updateUndoRedoQuickButtons()
         
         updateScreenDimensions()
         val menuWidthPx = (240 * density).toInt()
@@ -710,6 +876,100 @@ class FloatingBubbleService : Service() {
         infoPill?.visibility = View.GONE
         copiedBadge?.visibility = View.GONE
         resetInactivityTimer()
+    }
+
+    private fun updateUndoRedoQuickButtons() {
+        val density = resources.displayMetrics.density
+        val canUndo = UndoRedoManager.canUndo.value
+        val canRedo = UndoRedoManager.canRedo.value
+        val curText = UndoRedoManager.currentText.value
+
+        quickMenuUndoSubtitle?.text = if (curText != null) {
+            "বর্তমান: \"${curText.take(16)}${if (curText.length > 16) "..." else ""}\""
+        } else {
+            "কোনো সক্রিয় ভয়েস ইনপুট নেই"
+        }
+
+        quickMenuUndoBtn?.apply {
+            isEnabled = canUndo
+            setTextColor(if (canUndo) Color.WHITE else Color.parseColor("#64748B"))
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 10 * density
+                setColor(if (canUndo) Color.parseColor("#3730A3") else Color.parseColor("#1E293B"))
+                setStroke((1 * density).toInt(), if (canUndo) Color.parseColor("#6366F1") else Color.parseColor("#334155"))
+            }
+            background = bg
+        }
+
+        quickMenuRedoBtn?.apply {
+            isEnabled = canRedo
+            setTextColor(if (canRedo) Color.WHITE else Color.parseColor("#64748B"))
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 10 * density
+                setColor(if (canRedo) Color.parseColor("#065F46") else Color.parseColor("#1E293B"))
+                setStroke((1 * density).toInt(), if (canRedo) Color.parseColor("#10B981") else Color.parseColor("#334155"))
+            }
+            background = bg
+        }
+    }
+
+    private fun updateBubbleAppearance() {
+        val density = resources.displayMetrics.density
+        val sizeDp = appPreferences.bubbleSizeDp.value
+        val sizePx = (sizeDp * density).toInt()
+        val theme = appPreferences.getSelectedColorTheme()
+        val opacity = appPreferences.bubbleOpacity.value
+
+        // Update bubbleCircle LayoutParams
+        val circleParams = FrameLayout.LayoutParams(sizePx, sizePx).apply {
+            gravity = Gravity.CENTER
+        }
+        bubbleCircle?.layoutParams = circleParams
+
+        // Update pulseRing LayoutParams
+        val ringParams = FrameLayout.LayoutParams(
+            (sizePx * 1.5f).toInt(),
+            (sizePx * 1.5f).toInt()
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+        pulseRing?.layoutParams = ringParams
+
+        // Update mic icon padding
+        val pad = (sizePx * 0.22f).toInt()
+        micIcon?.setPadding(pad, pad, pad, pad)
+
+        // Update bubble background gradient
+        val bgDrawable = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(theme.startColorInt, theme.endColorInt)
+        ).apply {
+            shape = GradientDrawable.OVAL
+            setStroke((2 * density).toInt(), Color.parseColor("#FFFFFF"))
+        }
+        bubbleCircle?.background = bgDrawable
+
+        // Update pulseRing background
+        val ringDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            val rawAccent = theme.accentColorHex.removePrefix("#")
+            setColor(Color.parseColor("#44$rawAccent"))
+            setStroke((3 * density).toInt(), theme.ringColorInt)
+        }
+        pulseRing?.background = ringDrawable
+
+        // Update opacity
+        if (!isDimmed) {
+            bubbleCircle?.alpha = opacity
+        }
+
+        try {
+            windowManager?.updateViewLayout(floatingRootView, windowParams)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating bubble appearance layout", e)
+        }
     }
 
     private fun hideQuickMenu() {
@@ -909,10 +1169,16 @@ class FloatingBubbleService : Service() {
 
             withContext(Dispatchers.Main) {
                 showInfoPill("", false)
-                if (appPreferences.autoCopy.value && finalText.isNotBlank()) {
-                    val clip = ClipData.newPlainText("Voice Transcription", finalText)
-                    clipboardManager.setPrimaryClip(clip)
-                    showCopiedBadge("কপি হয়েছে: \"${finalText.take(30)}${if (finalText.length > 30) "..." else ""}\"")
+                if (finalText.isNotBlank()) {
+                    UndoRedoManager.recordInput(this@FloatingBubbleService, finalText)
+                    if (appPreferences.autoCopy.value) {
+                        val clip = ClipData.newPlainText("Voice Transcription", finalText)
+                        clipboardManager.setPrimaryClip(clip)
+                        showCopiedBadge("কপি হয়েছে: \"${finalText.take(24)}${if (finalText.length > 24) "..." else ""}\"", showUndo = true)
+                    } else {
+                        showCopiedBadge("টাইপিং সম্পন্ন: \"${finalText.take(24)}${if (finalText.length > 24) "..." else ""}\"", showUndo = true)
+                    }
+                    updateUndoRedoQuickButtons()
                 }
                 updateNotification("ভয়েস টাইপিং সম্পন্ন: \"${finalText.take(20)}\"")
             }
@@ -983,9 +1249,10 @@ class FloatingBubbleService : Service() {
         }
     }
 
-    private fun showCopiedBadge(message: String) {
+    private fun showCopiedBadge(message: String, showUndo: Boolean = false) {
         hideCopiedBadgeRunnable?.let { mainHandler.removeCallbacks(it) }
         copiedBadgeText?.text = message
+        undoBadgeBtn?.visibility = if (showUndo && UndoRedoManager.canUndo.value) View.VISIBLE else View.GONE
         copiedBadge?.visibility = View.VISIBLE
 
         val anim = AlphaAnimation(0f, 1f).apply { duration = 200 }
@@ -998,13 +1265,15 @@ class FloatingBubbleService : Service() {
                     override fun onAnimationStart(animation: Animation?) {}
                     override fun onAnimationEnd(animation: Animation?) {
                         copiedBadge?.visibility = View.GONE
+                        undoBadgeBtn?.visibility = View.GONE
                     }
                     override fun onAnimationRepeat(animation: Animation?) {}
                 })
             }
             copiedBadge?.startAnimation(fadeOut)
         }
-        mainHandler.postDelayed(hideCopiedBadgeRunnable!!, 2500)
+        val timeout = if (showUndo) 4000L else 2500L
+        mainHandler.postDelayed(hideCopiedBadgeRunnable!!, timeout)
     }
 
     private fun updateNotification(text: String) {
@@ -1028,6 +1297,16 @@ class FloatingBubbleService : Service() {
             }
         }
         serviceScope.launch {
+            appPreferences.bubbleSizeDp.collect {
+                updateBubbleAppearance()
+            }
+        }
+        serviceScope.launch {
+            appPreferences.bubbleColorTheme.collect {
+                updateBubbleAppearance()
+            }
+        }
+        serviceScope.launch {
             appPreferences.autoDim.collect {
                 resetInactivityTimer()
             }
@@ -1036,6 +1315,20 @@ class FloatingBubbleService : Service() {
             appPreferences.aiPolishEnabled.collect { isEnabled ->
                 geminiStatusBadge?.let {
                     updateGeminiBadge(it, isEnabled, resources.displayMetrics.density)
+                }
+            }
+        }
+        serviceScope.launch {
+            UndoRedoManager.canUndo.collect {
+                if (isQuickMenuOpen) {
+                    updateUndoRedoQuickButtons()
+                }
+            }
+        }
+        serviceScope.launch {
+            UndoRedoManager.canRedo.collect {
+                if (isQuickMenuOpen) {
+                    updateUndoRedoQuickButtons()
                 }
             }
         }

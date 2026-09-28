@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BrightnessMedium
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
@@ -37,8 +39,11 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Opacity
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Wifi
@@ -62,6 +67,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -70,7 +76,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.VoiceBubbleApp
+import com.example.data.BubbleThemes
 import com.example.data.SupportedLanguages
+import com.example.data.UndoRedoManager
 import com.example.ui.components.LanguageSelectorDialog
 import kotlin.math.roundToInt
 
@@ -86,6 +94,7 @@ fun SettingsScreen(
     val selectedLangCode by prefs.selectedLanguage.collectAsState()
     val bubbleSize by prefs.bubbleSizeDp.collectAsState()
     val bubbleOpacity by prefs.bubbleOpacity.collectAsState()
+    val bubbleColorTheme by prefs.bubbleColorTheme.collectAsState()
     val autoCopy by prefs.autoCopy.collectAsState()
     val haptic by prefs.hapticFeedback.collectAsState()
     val sound by prefs.soundFeedback.collectAsState()
@@ -94,6 +103,11 @@ fun SettingsScreen(
     val autoDim by prefs.autoDim.collectAsState()
     val aiPolishEnabled by prefs.aiPolishEnabled.collectAsState()
 
+    val canUndo by UndoRedoManager.canUndo.collectAsState()
+    val canRedo by UndoRedoManager.canRedo.collectAsState()
+    val currentInputText by UndoRedoManager.currentText.collectAsState()
+
+    val currentTheme = remember(bubbleColorTheme) { BubbleThemes.getThemeById(bubbleColorTheme) }
     val allHistory by app.repository.allHistory.collectAsState(initial = emptyList())
     val recentHistory = remember(allHistory) { allHistory.take(5) }
 
@@ -107,8 +121,163 @@ fun SettingsScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Section 1: Floating Bubble Appearance & Physics
-        SectionCard(title = "ফ্লোটিং বাবল কাস্টমাইজেশন (Bubble Display)") {
+        // Section 1: Floating Bubble Appearance Customization
+        SectionCard(title = "ফ্লোটিং বাবল কাস্টমাইজেশন (Bubble Appearance)") {
+            // Live Bubble Preview
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "লাইভ বাবল প্রিভিউ (Live Preview)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size((bubbleSize + 28).dp)
+                            .padding(4.dp)
+                    ) {
+                        // Pulse Ring Preview
+                        Surface(
+                            shape = CircleShape,
+                            color = currentTheme.composeAccentColor.copy(alpha = 0.2f),
+                            border = BorderStroke(2.dp, currentTheme.composeAccentColor.copy(alpha = 0.6f)),
+                            modifier = Modifier.size((bubbleSize * 1.35f).dp)
+                        ) {}
+
+                        // Main Bubble Preview Circle
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(bubbleSize.dp)
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(currentTheme.composeStartColor, currentTheme.composeEndColor)
+                                    ),
+                                    shape = CircleShape,
+                                    alpha = bubbleOpacity
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Mic Preview",
+                                tint = Color.White,
+                                modifier = Modifier.size((bubbleSize * 0.44f).dp)
+                            )
+
+                            // Flag Badge Preview
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFF1E1B4B),
+                                border = BorderStroke(1.dp, Color(0xFF6366F1)),
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .size(20.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(text = currentLang.flag, fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "${currentTheme.nameBn} • আকার: ${bubbleSize}dp • স্বচ্ছতা: ${(bubbleOpacity * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
+            // Color Theme Selector
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text(text = "বাবল কালার থিম (Color Theme)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    BubbleThemes.THEMES.forEach { theme ->
+                        val isSelected = theme.id == bubbleColorTheme
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            border = BorderStroke(
+                                width = if (isSelected) 2.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            modifier = Modifier
+                                .clickable { prefs.setBubbleColorTheme(theme.id) }
+                                .testTag("theme_chip_${theme.id}")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .background(
+                                            brush = Brush.linearGradient(
+                                                colors = listOf(theme.composeStartColor, theme.composeEndColor)
+                                            ),
+                                            shape = CircleShape
+                                        )
+                                )
+                                Column {
+                                    Text(
+                                        text = theme.nameBn,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = theme.nameEn,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
             // Bubble Size Slider
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Row(
@@ -128,8 +297,8 @@ fun SettingsScreen(
                 Slider(
                     value = bubbleSize.toFloat(),
                     onValueChange = { prefs.setBubbleSize(it.roundToInt()) },
-                    valueRange = 48f..80f,
-                    steps = 7,
+                    valueRange = 48f..84f,
+                    steps = 8,
                     modifier = Modifier.testTag("bubble_size_slider")
                 )
             }
@@ -148,15 +317,15 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(imageVector = Icons.Default.Opacity, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text(text = "স্বচ্ছতা (Opacity)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        Text(text = "স্বচ্ছতার মাত্রা (Transparency / Opacity)", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                     }
                     Text(text = "${(bubbleOpacity * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
                 Slider(
                     value = bubbleOpacity,
                     onValueChange = { prefs.setBubbleOpacity(it) },
-                    valueRange = 0.5f..1.0f,
-                    steps = 9,
+                    valueRange = 0.30f..1.0f,
+                    steps = 13,
                     modifier = Modifier.testTag("bubble_opacity_slider")
                 )
             }
@@ -194,6 +363,110 @@ fun SettingsScreen(
                     prefs.setBubblePosition(-1, -1)
                 }
             )
+        }
+
+        // Section: Undo & Redo Management
+        SectionCard(title = "আনডু ও রি-ডু স্ট্যাটাস (Undo & Redo Buffer)") {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "ফ্লোটিং বাবল বা ইন-অ্যাপ টেস্ট প্যাড দিয়ে টাইপ করা শেষ বক্তব্য ভুল হলে আনডু করে পূর্বাবস্থায় ফিরতে পারেন। প্রয়োজন হলে রি-ডু করে তা আবার পুনরুদ্ধার করতে পারেন।",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (currentInputText != null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "সর্বশেষ রেকর্ডকৃত ভয়েস ইনপুট:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "\"$currentInputText\"",
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 3,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (canUndo) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, if (canUndo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(enabled = canUndo) {
+                                val result = UndoRedoManager.undo(context)
+                                Toast.makeText(context, result.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Undo,
+                                contentDescription = "Undo",
+                                tint = if (canUndo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = "Undo (আনডু)",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (canUndo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (canRedo) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, if (canRedo) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outlineVariant),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(enabled = canRedo) {
+                                val result = UndoRedoManager.redo(context)
+                                Toast.makeText(context, result.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Redo,
+                                contentDescription = "Redo",
+                                tint = if (canRedo) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = "Redo (রি-ডু)",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (canRedo) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // Section 2: Voice Recognition & Clipboard
