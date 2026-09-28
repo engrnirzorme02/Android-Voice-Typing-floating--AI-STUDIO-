@@ -1,3 +1,194 @@
 <resources>
     <string name="app_name">Voice Bubble</string>
+    <string name="qs_tile_label">ভয়েস বাবল</string>
+
+    <!-- General Navigation & Headers -->
+    <string name="nav_home">হোম</string>
+    <string name="nav_history">ইতিহাস</string>
+    <string name="nav_settings">সেটিংস</string>
+    <string name="header_active">ACTIVE</string>
+    <string name="header_inactive">OFF</string>
+    <string name="header_bubble_status">Floating Voice Bubble</string>
+    <string name="bubble_status_active">স্ক্রিনে ভাসমান বাবল সক্রিয়</string>
+    <string name="bubble_status_inactive">বাবল বন্ধ আছে (Inactive)</string>
+    <string name="voice_lang_label">ভয়েস ভাষা: %1$s</string>
+    <string name="change_action">পরিবর্তন করুন ➔</string>
+    <string name="copied_toast">ক্লিপবোর্ডে কপি হয়েছে! ✓</string>
+    <string name="service_stopped_toast">ভয়েস বাবল বন্ধ করা হয়েছে</string>
+
+    <!-- Test Pad -->
+    <string name="test_pad_title">ভয়েস টাইপিং টেস্ট প্যাড</string>
+    <string name="test_pad_subtitle">এখানে কথা বলে সরাসরি টেস্ট করুন</string>
+    <string name="test_pad_listening_hint">শুনছি... আপনার কথা বলুন...</string>
+    <string name="test_pad_idle_hint">কথা বলতে নিচের বাটনে ট্যাপ করুন। কথা শেষ হলে লেখাটি সাথে সাথে কপি হয়ে যাবে।</string>
+    <string name="test_pad_btn_stop">থামুন (Stop)</string>
+    <string name="test_pad_btn_start">কথা বলুন (Tap to Speak)</string>
+    <string name="test_pad_polishing_indicator">✨ AI পরিমার্জন করা হচ্ছে...</string>
+    <string name="test_pad_copy_btn">কপি</string>
+    <string name="test_pad_copied_btn">কপি হয়েছে!</string>
+
+    <!-- Permissions Card & Onboarding -->
+    <string name="permissions_title">প্রয়োজনীয় পারমিশন ও সেটিংস</string>
+    <string name="perm_overlay_title">অন্য অ্যাপের উপর প্রদর্শন (Display Over Other Apps)</string>
+    <string name="perm_overlay_desc">স্ক্রিনের সর্বত্র ফ্লোটিং বাবল ভাসমান রাখতে এই পারমিশনটি অত্যাবশ্যক।</string>
+    <string name="perm_mic_title">মাইক্রোফোন অ্যাক্সেস (Microphone)</string>
+    <string name="perm_mic_desc">আপনার ভয়েস শুনে টেক্সটে রূপান্তর করার জন্য প্রয়োজন।</string>
+    <string name="perm_notif_title">নোটিফিকেশন অনুমতি (Notifications)</string>
+    <string name="perm_notif_desc">ফোরগ্রাউন্ড সার্ভিস সচল রাখতে এবং ব্যাকগ্রাউন্ডে বাবল চালু রাখতে প্রয়োজন।</string>
+    <string name="perm_battery_title">ব্যাটারি অপ্টিমাইজেশন ছাড় (Battery Optimization Exemption)</string>
+    <string name="perm_battery_desc">সিস্টেম যাতে মেমোরি খালি করার সময় বাবল বন্ধ না করে দেয়।</string>
+    <string name="perm_status_granted">অনুমোদিত ✓</string>
+    <string name="perm_status_denied">অনুমতি দিন</string>
+    <string name="perm_status_exempted">ছাড়প্রাপ্ত ✓</string>
+    <string name="perm_status_exempt_action">ছাড় দিন</string>
+    <string name="perm_required_alert">প্রথমে প্রয়োজনীয় পারমিশনগুলো চালু করুন</string>
+    <string name="perm_mic_granted_toast">মাইক্রোফোন পারমিশন অনুমোদিত হয়েছে</string>
+    <string name="perm_mic_denied_toast">ভয়েস টাইপিংয়ের জন্য মাইক্রোফোন পারমিশন প্রয়োজন</string>
+
+    <!-- Autostart Guide (Xiaomi/POCO/Oppo/Vivo/Realme) -->
+    <string name="autostart_guide_title">অটোস্টার্ট ও ব্যাকগ্রাউন্ড প্রোটেকশন (MIUI/ColorOS/Funtouch)</string>
+    <string name="autostart_guide_desc">আপনার ফোন প্রস্তুতকারকের মেমোরি ক্লিনার ব্যাকগ্রাউন্ড সার্ভিস বন্ধ করে দিতে পারে। বাবল নিরবচ্ছিন্ন রাখতে নিচের কাজগুলো করুন:</string>
+    <string name="autostart_step1">১. অটোস্টার্ট সেটিংস ওপেন করে Voice Bubble অ্যাপকে অনুমতি দিন।</string>
+    <string name="autostart_step2">২. রিসেন্ট অ্যাপস (Recent Apps) স্ক্রিনে গিয়ে Voice Bubble কার্ডটিতে লং প্রেস করে লক (Lock 🔒) আইকনে চাপ দিন।</string>
+    <string name="autostart_btn_open">অটোস্টার্ট সেটিংস ওপেন করুন</string>
+    <string name="autostart_opened_toast">অটোস্টার্ট পেজ ওপেন হচ্ছে</string>
+    <string name="autostart_failed_toast">অ্যাপ ডিটেইলস সেটিংস ওপেন করা হচ্ছে</string>
+
+    <!-- SwiftKey Tip -->
+    <string name="tip_title">সুইফটকি ও অন্যান্য কীবোর্ড টিপস</string>
+    <string name="tip_body">বাবলে ট্যাপ করে কথা বললে সাথে সাথে টেক্সট ক্লিপবোর্ডে চলে যায়। SwiftKey এর প্রেডিকশন বারে ১-ট্যাপ করলেই লেখাটি পেস্ট হয়ে যাবে!</string>
+
+    <!-- Notification Strings -->
+    <string name="notification_channel_name">Voice Bubble Service</string>
+    <string name="notification_channel_desc">ফ্লোটিং ভয়েস বাবল সার্ভিস স্ট্যাটাস</string>
+    <string name="notification_title">Voice Bubble চলছে</string>
+    <string name="notification_text">ভয়েস টাইপিং বাবল স্ক্রিনে সক্রিয় রয়েছে</string>
+    <string name="notification_action_stop">Stop</string>
+
+    <!-- Bubble Visual Content Descriptions & UI -->
+    <string name="bubble_content_desc">Voice Typing Floating Bubble</string>
+    <string name="bubble_state_idle">প্রস্তুত</string>
+    <string name="bubble_state_listening">শুনছি...</string>
+    <string name="bubble_state_processing">প্রসেসিং...</string>
+    <string name="bubble_state_copied">কপি হয়েছে ✓</string>
+    <string name="bubble_remove_target">বন্ধ করতে এখানে টানুন</string>
+
+    <!-- Speech Recognizer Error Messages (Bangla) -->
+    <string name="speech_err_network_timeout">নেটওয়ার্ক টাইমআউট হয়েছে। আবার চেষ্টা করুন।</string>
+    <string name="speech_err_network">নেটওয়ার্ক সমস্যা! ইন্টারনেট কানেকশন চেক করুন বা অফলাইন ডাটা ব্যবহার করুন।</string>
+    <string name="speech_err_audio">অডিও রেকর্ডিং এরর। মাইক্রোফোন চেক করুন।</string>
+    <string name="speech_err_server">সার্ভার এরর (Google Speech Server error)।</string>
+    <string name="speech_err_client">ক্লায়েন্ট সাইড এরর।</string>
+    <string name="speech_err_speech_timeout">কথা শনাক্তের সময়সীমা পার হয়ে গেছে (Speech timeout)।</string>
+    <string name="speech_err_no_match">কোনো কথা শনাক্ত করা যায়নি (No speech detected)।</string>
+    <string name="speech_err_busy">স্পিচ সার্ভিস ব্যস্ত রয়েছে, পুনরায় চেষ্টা করা হচ্ছে...</string>
+    <string name="speech_err_busy_final">স্পিচ সার্ভিস ব্যস্ত রয়েছে। কিছুক্ষণ পর চেষ্টা করুন।</string>
+    <string name="speech_err_permissions">মাইক্রোফোন পারমিশন প্রয়োজন (Microphone permission required)।</string>
+    <string name="speech_err_unknown">ভয়েস টাইপিং ত্রুটি (%1$d)।</string>
+    <string name="speech_not_available">ডিভাইসে স্পিচ রিকগনিশন সেবা অনুপলব্ধ। Google Speech Services ইন্সটল বা চালু করুন।</string>
+
+    <!-- History Screen -->
+    <string name="history_title">ভয়েস টাইপিং ইতিহাস</string>
+    <string name="history_stat_total">মোট টাইপিং</string>
+    <string name="history_stat_words">মোট শব্দ</string>
+    <string name="history_stat_chars">অক্ষর সংখ্যা</string>
+    <string name="history_times_unit">%1$d বার</string>
+    <string name="history_words_unit">%1$d টি</string>
+    <string name="history_search_hint">ইতিহাস খুঁজুন (Search transcripts)...</string>
+    <string name="history_filter_all">সকল (%1$d)</string>
+    <string name="history_filter_fav">ফেভারিট (%1$d)</string>
+    <string name="history_clear_tooltip">সব মুছুন</string>
+    <string name="history_empty_title">কোনো হিস্ট্রি নেই</string>
+    <string name="history_empty_subtitle">ফ্লোটিং বাবল বা টেস্ট প্যাড দিয়ে কথা বললে এখানে স্বয়ংক্রিয়ভাবে সংরক্ষিত হবে।</string>
+    <string name="history_clear_dialog_title">সব হিস্ট্রি মুছে ফেলতে চান?</string>
+    <string name="history_clear_dialog_body">সমস্ত সংরক্ষিত ভয়েস টাইপিং রেকর্ড মুছে ফেলা হবে। এটি পুনরায় ফিরিয়ে আনা যাবে না।</string>
+    <string name="history_clear_confirm">মুছে ফেলুন (Delete All)</string>
+    <string name="history_clear_cancel">বাতিল (Cancel)</string>
+    <string name="history_deleted_toast">রেকর্ড মুছে ফেলা হয়েছে</string>
+    <string name="history_undo_toast">মুছে ফেলা বাতিল করা হয়েছে</string>
+    <string name="history_item_copied">কপি হয়েছে ✓</string>
+    <string name="history_copy_action">Copy</string>
+    <string name="history_share_action">Share</string>
+    <string name="history_detail_title">বিস্তারিত ট্রান্সক্রিপশন</string>
+    <string name="history_detail_raw">আসল কথা (Raw):</string>
+    <string name="history_detail_polished">AI পরিমার্জিত (Polished):</string>
+    <string name="history_detail_copy_raw">Copy Raw</string>
+    <string name="history_detail_copy_polished">Copy Polished</string>
+    <string name="history_detail_edit">সম্পাদনা</string>
+    <string name="history_detail_save">সংরক্ষণ করুন</string>
+    <string name="history_detail_delete">মুছুন</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">সেটিংস</string>
+    <string name="settings_appearance_section">ফ্লোটিং বাবল চেহারা ও আচরণ</string>
+    <string name="settings_preview_title">লাইভ বাবল প্রিভিউ</string>
+    <string name="settings_size_label">বাবল সাইজ: %1$d dp (48–100dp)</string>
+    <string name="settings_opacity_label">বাবল স্বচ্ছতা (Opacity): %1$d%%</string>
+    <string name="settings_theme_label">কালার থিম</string>
+    <string name="settings_dock_edge_title">স্ক্রিন প্রান্তে ডকিং (Dock to Edge)</string>
+    <string name="settings_dock_edge_desc">ছেড়ে দিলে বাবলটি নিজে থেকেই স্ক্রিনের কাছাকাছি প্রান্তে লেগে থাকবে</string>
+    <string name="settings_always_on_title">বাবল সর্বদা চালু রাখুন (Keep Bubble Always On)</string>
+    <string name="settings_always_on_desc">নিষ্ক্রিয় অবস্থায় ১৫ সেকেন্ড পর অটো-ডিসমিস হবে না</string>
+    <string name="settings_tile_start_mic_title">টাইল থেকে সরাসরি লিসেনিং শুরু (Start Listening from Tile)</string>
+    <string name="settings_tile_start_mic_desc">কুইক সেটিংস টাইল ট্যাপ করলেই সাথে সাথে মাইক্রোফোন চালু হবে</string>
+    <string name="settings_reset_pos_title">পজিশন রিসেট করুন</string>
+    <string name="settings_reset_pos_desc">বাবলটিকে স্ক্রিনের ডিফল্ট অবস্থানে ফিরিয়ে আনুন</string>
+    <string name="settings_speech_section">ভয়েস টাইপিং ও স্পিচ সার্ভিস</string>
+    <string name="settings_lang_title">ভয়েস ইনপুট ভাষা (Recognition Language)</string>
+    <string name="settings_auto_copy_title">অটোমেটিক ক্লিপবোর্ডে কপি (Auto Copy)</string>
+    <string name="settings_auto_copy_desc">কথা বলা শেষ হলে নিজে থেকেই লেখা ক্লিপবোর্ডে কপি হবে</string>
+    <string name="settings_haptic_title">হ্যাপটিক ভাইব্রেশন (Vibration Feedback)</string>
+    <string name="settings_haptic_desc">রেকর্ডিং শুরু, শেষ এবং কপি হওয়ার সময় মৃদু ভাইব্রেশন হবে</string>
+    <string name="settings_sound_title">অডিও সংকেত (Sound Beep)</string>
+    <string name="settings_sound_desc">ভয়েস টাইপিং শুরুর সময় বিপ শব্দ শোনা যাবে</string>
+    <string name="settings_retention_title">হিস্ট্রি সংরক্ষণের মেয়াদ (Auto-Prune Retention)</string>
+    <string name="settings_retention_days_format">%1$d দিন</string>
+    <string name="settings_retention_never">কখনো মুছবে না (Never)</string>
+
+    <!-- Gemini AI Security & Key Section -->
+    <string name="settings_gemini_section">Gemini 2.5 Flash AI পলিশিং ও সিকিউরিটি</string>
+    <string name="settings_gemini_enable_title">Gemini AI পরিমার্জন ও প্যারাফ্রেজ</string>
+    <string name="settings_gemini_enable_desc">কথ্য বাংলার ফিলার শব্দ ও ব্যাকরণগত ত্রুটি সংশোধন করে নিখুঁত টেক্সট তৈরি করবে</string>
+    <string name="gemini_key_label">Gemini API Key</string>
+    <string name="gemini_key_hint">আপনার Gemini API Key এখানে পেস্ট করুন</string>
+    <string name="gemini_key_no_key_warning">⚠️ কোনো API কি দেওয়া হয়নি — শুধুমাত্র কাঁচা (raw) টেক্সট ব্যবহার করা হবে।</string>
+    <string name="gemini_key_keystore_notice">🔒 কী-টি Android Keystore হার্ডওয়্যার ব্যাকড AES-GCM দিয়ে সুরক্ষিতভাবে এনক্রিপ্ট করে রাখা হয়।</string>
+    <string name="gemini_test_btn_idle">Test Key</string>
+    <string name="gemini_test_btn_testing">যাচাই করা হচ্ছে...</string>
+    <string name="gemini_test_valid">✓ API Key বৈধ ও কার্যকর!</string>
+    <string name="gemini_test_invalid">❌ API Key অবৈধ বা মেয়াদোত্তীর্ণ!</string>
+    <string name="gemini_test_network_error">⚠️ নেটওয়ার্ক ত্রুটি! ইন্টারনেট কানেকশন চেক করুন।</string>
+    <string name="gemini_direct_audio_title">Direct Gemini Audio (Experimental / পরীক্ষামূলক)</string>
+    <string name="gemini_direct_audio_desc">স্পিচ রিকগনাইজারের বদলে সরাসরি অডিও পাঠিয়ে ট্রান্সক্রিপশন (পরিকল্পিত)</string>
+    <string name="gemini_direct_audio_disabled_notice">বর্তমানে পরীক্ষামূলক পর্যায়ে রয়েছে (Default OFF)</string>
+
+    <!-- Process Text Activity -->
+    <string name="process_text_title">Voice Bubble Text Action</string>
+    <string name="process_text_selected_label">বাছাইকৃত টেক্সট:</string>
+    <string name="process_text_polish_btn">✨ AI দিয়ে পরিমার্জন করুন</string>
+    <string name="process_text_dictate_btn">🎙️ মুখে বলে টেক্সট প্রতিস্থাপন</string>
+    <string name="process_text_polishing">AI পরিমার্জন করছে...</string>
+    <string name="process_text_dictating">কথা বলুন...</string>
+    <string name="process_text_replaced_toast">টেক্সট প্রতিস্থাপন সম্পন্ন হয়েছে!</string>
+
+    <!-- Self Updater -->
+    <string name="updater_section_title">অ্যাপ আপডেট (GitHub Releases)</string>
+    <string name="updater_current_version">বর্তমান ভার্সন: v%1$s (বিল্ড %2$d)</string>
+    <string name="updater_check_btn">আপডেট চেক করুন (Check for updates)</string>
+    <string name="updater_status_checking">নতুন আপডেট খোঁজা হচ্ছে...</string>
+    <string name="updater_status_up_to_date">আপনার অ্যাপটি সর্বশেষ সংস্করণে রয়েছে (v%1$s) ✓</string>
+    <string name="updater_status_available">নতুন আপডেট পাওয়া গেছে: v%1$s</string>
+    <string name="updater_download_btn">ডাউনলোড ও ইনস্টল করুন</string>
+    <string name="updater_status_downloading">ডাউনলোড হচ্ছে: %1$d%%</string>
+    <string name="updater_status_verifying">SHA-256 চেকসাম যাচাই করা হচ্ছে...</string>
+    <string name="updater_status_ready">ইনস্টল করতে প্রস্তুত</string>
+    <string name="updater_install_btn">ইনস্টল করুন</string>
+    <string name="updater_installed_toast">v%1$s সংস্করণে আপডেট সফল হয়েছে!</string>
+    <string name="updater_err_prefix">ত্রুটি: %1$s</string>
+    <string name="updater_retry_btn">আবার চেষ্টা করুন</string>
+    <string name="updater_perm_dialog_title">অজানা অ্যাপ ইনস্টল অনুমতি প্রয়োজন</string>
+    <string name="updater_perm_dialog_body">GitHub Release থেকে নতুন সংস্করণ আপডেট ইনস্টল করতে Voice Bubble অ্যাপকে অনুমতি দিতে হবে।</string>
+    <string name="updater_perm_dialog_btn">সেটিংসে যান</string>
+    <string name="updater_blocked_busy">ভয়েস রেকর্ডিং বা প্রসেসিং চলাকালীন আপডেট করা যাবে না</string>
+    <string name="updater_sha_mismatch">SHA-256 চেকসাম মেলেনি! ফাইলটি বাতিল করা হয়েছে।</string>
 </resources>
