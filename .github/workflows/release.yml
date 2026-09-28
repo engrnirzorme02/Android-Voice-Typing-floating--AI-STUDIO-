@@ -1,0 +1,72 @@
+name: Build & Release Voice Bubble APK
+
+on:
+  push:
+    tags:
+      - 'v*' # যেমন: v1.0.0, v1.0.1 পুশ করলেই এটি চলবে
+  workflow_dispatch: # চাইলে Actions ট্যাব থেকে ম্যানুয়ালি রান করতে পারবেন
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant Execute Permission to Gradlew
+        run: chmod +x gradlew
+
+      - name: Extract Version Tag
+        id: get_version
+        run: |
+          # ট্যাগ থেকে 'v' প্রিফিক্স ছাড়া সংস্করণ নেওয়া (যেমন: 1.0.0)
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          VERSION_NAME="${TAG_NAME#v}"
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+      - name: Build Release APK
+        run: |
+          ./gradlew assembleRelease -PversionName=${{ env.VERSION_NAME }} --stacktrace
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release-artifacts
+          # বিল্ড হওয়া APK কপি করে voicebubble.apk নাম দেওয়া
+          cp app/build/outputs/apk/release/app-release.apk release-artifacts/voicebubble.apk
+          
+          # SHA-256 চেকসাম তৈরি করা (যা অ্যাপের ইন-অ্যাপ আপডেটারে যাচাই করা হয়)
+          cd release-artifacts
+          sha256sum voicebubble.apk | awk '{print $1}' > voicebubble.apk.sha256
+          cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            release-artifacts/voicebubble.apk
+            release-artifacts/voicebubble.apk.sha256
+          name: Release ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
