@@ -15,12 +15,12 @@ val calculatedVersionCode = major * 10000 + minor * 100 + patch
 
 android {
   namespace = "com.nirzor.voicebubble"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  compileSdk = 36
 
   defaultConfig {
     applicationId = "com.nirzor.voicebubble"
     minSdk = 24
-    targetSdk = 36
+    targetSdk = 35
     versionCode = calculatedVersionCode
     versionName = cleanVersionName
 
